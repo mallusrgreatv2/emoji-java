@@ -1,69 +1,76 @@
-
 plugins {
-    id('java-library')
-    id('maven-publish')
-    id("com.gradleup.shadow") version "9.3.1"
-    id('de.undercouch.download').version('4.1.2')
+    id 'java-library'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version '9.3.1'
+    id 'de.undercouch.download' version '4.1.2'
 }
 
 group = 'com.github.minndevelopment'
 version = '6.1.0'
 
-tasks.create("downloadDefinitions", Download) {
-    group = "build setup"
-    dest file("src/main/resources/emoji-definitions.json")
-    src "https://emzi0767.mzgit.io/discord-emoji/discordEmojiMap.json"
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
-tasks.create("downloadEmojiList", Download) {
-    group = "build setup"
-    dest file("src/main/resources/emoji-list.json")
-    src "https://raw.githubusercontent.com/kcthota/emoji4j/master/src/main/resources/emoji.json"
+tasks.register('downloadDefinitions', de.undercouch.gradle.tasks.download.Download) {
+    group = 'build setup'
+    src 'https://emzi0767.mzgit.io/discord-emoji/discordEmojiMap.json'
+    dest layout.projectDirectory.file('src/main/resources/emoji-definitions.json')
 }
 
-tasks.create("downloadResources") {
-    dependsOn(downloadDefinitions, downloadEmojiList)
+tasks.register('downloadEmojiList', de.undercouch.gradle.tasks.download.Download) {
+    group = 'build setup'
+    src 'https://raw.githubusercontent.com/kcthota/emoji4j/master/src/main/resources/emoji.json'
+    dest layout.projectDirectory.file('src/main/resources/emoji-list.json')
 }
 
-processResources {
-    dependsOn downloadResources
+tasks.register('downloadResources') {
+    dependsOn 'downloadDefinitions', 'downloadEmojiList'
 }
 
-tasks.withType(JavaCompile) {
-	options.encoding = 'UTF-8'
+tasks.named('processResources') {
+    dependsOn 'downloadResources'
 }
 
-tasks.withType(Javadoc) {
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc).configureEach {
     failOnError = false
-    options.encoding = "UTF-8"
+    options.encoding = 'UTF-8'
     options.memberLevel = JavadocMemberLevel.PUBLIC
-
     options.links(
-        "https://docs.oracle.com/en/java/javase/11/docs/api/",
-        "https://square.github.io/okhttp/3.x/okhttp/"
+            'https://docs.oracle.com/en/java/javase/11/docs/api/',
+            'https://square.github.io/okhttp/3.x/okhttp/'
     )
-    if (JavaVersion.current().isJava9Compatible())
-        options.addBooleanOption("html5", true)
-    if (JavaVersion.current().isJava11Compatible())
-        options.addBooleanOption("-no-module-directories", true)
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+    if (JavaVersion.current().isJava11Compatible()) {
+        options.addBooleanOption('-no-module-directories', true)
+    }
 }
 
 repositories {
-     mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-    compileOnly group: 'org.jetbrains', name: 'annotations', version: '23.0.0'
-    implementation group: 'org.json', name: 'json', version:'20211205'
-    testImplementation group: 'junit', name: 'junit', version:'4.13'
+    compileOnly 'org.jetbrains:annotations:23.0.0'
+    implementation 'org.json:json:20211205'
+    testImplementation 'junit:junit:4.13'
 }
 
-publishing.publications {
-    Release(MavenPublication) {
-        from components.java
-
-        version = project.version
-        groupId = project.group
-        artifactId = project.name
+publishing {
+    publications {
+        register('release', MavenPublication) {
+            from components.java
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
     }
 }
